@@ -133,6 +133,25 @@ extension AxUiElementMock {
             return false
         }
 
+        // Emacs child frames (corfu / eldoc-box / posframe popups) are transient UI elements
+        // that should not be managed as windows. Matches both Emacs.app (bundle id "org.gnu.Emacs")
+        // and nix-darwin's CLI-launched emacs daemon (nil bundle id, AXTitle "emacs").
+        // Uses button-absence as the discriminator — child frames have no window chrome buttons,
+        // AXMain == false, AXFocused == false.
+        // See https://github.com/nikitabobko/AeroSpace/issues/776
+        let isEmacsApp = id == .emacs
+            || (id == nil && (axApp.get(Ax.titleAttr) ?? "").lowercased() == "emacs")
+        if isEmacsApp &&
+            get(Ax.closeButtonAttr) == nil &&
+            get(Ax.minimizeButtonAttr) == nil &&
+            get(Ax.zoomButtonAttr) == nil &&
+            get(Ax.fullscreenButtonAttr) == nil &&
+            get(Ax.isMainAttr) != true &&
+            get(Ax.isFocused) != true
+        {
+            return false
+        }
+
         if id?.isFirefox != true {
             return isWindowHeuristicOld(axApp: axApp, id)
         }
